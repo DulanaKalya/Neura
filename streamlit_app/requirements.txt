@@ -1,0 +1,8 @@
+streamlit>=1.30.0
+firebase-admin>=6.2.0
+google-cloud-firestore>=2.13.0
+Pillow>=10.0.0
+streamlit-option-menu>=0.3.6
+streamlit-extras>=0.3.4
+python-dotenv>=1.0.0
+streamlit-authenticator>=0.2.3
