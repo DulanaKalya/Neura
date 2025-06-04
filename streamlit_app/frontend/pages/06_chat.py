@@ -167,7 +167,7 @@ if "user_input" not in st.session_state:
 def render_message(message, is_user=False):
     avatar = "👤" if is_user else "🆘"
     alignment = "flex-end" if is_user else "flex-start"
-    bg_color = "#4A179C" if is_user else "#1E3BFA"
+    bg_color = "#BAD99E" if is_user else "#A3AEF6"
     st.markdown(f"""
     <div style="display: flex; justify-content: {alignment}; margin-bottom: 10px;">
         <div style="background-color: {bg_color}; padding: 10px 15px; border-radius: 15px; max-width: 80%;">
@@ -272,7 +272,7 @@ with col1:
         ]
         
         # Get response from model
-        with st.spinner("Generating enhanced response..."):
+        with st.spinner("Generating response..."):
             try:
                 response = chat_with_llama(enhanced_prompt, history=formatted_history)
                 
@@ -330,16 +330,6 @@ with col2:
             st.cache_resource.clear()
             st.rerun()
     
-    # Search Knowledge Base
-    st.markdown("### 🔍 Search Knowledge Base")
-    search_query = st.text_input("Search emergency protocols:")
-    if search_query:
-        results = vector_db.search(search_query, k=3)
-        for doc, score in results:
-            with st.expander(f"{doc['title']} (Score: {score:.2f})"):
-                st.write(f"**Category:** {doc['category']}")
-                st.write(doc['content'])
-    
     # Emergency Contacts
     st.markdown("### 📞 Emergency Contacts")
     st.markdown("""
@@ -356,60 +346,5 @@ with col2:
         switch_page("request")
     if st.button("Return to Dashboard", use_container_width=True):
         switch_page("dashboard")
-    
-    # Emergency Categories
-    if vector_db and vector_db.documents:
-        # Show category distribution
-        category_counts = {}
-        for doc in vector_db.documents:
-            category = doc.get('category', 'unknown')
-            category_counts[category] = category_counts.get(category, 0) + 1
+
         
-        
-        # Category filter for search
-        st.markdown("### 🔍 Search by Category")
-        selected_categories = st.multiselect(
-            "Filter search by categories:",
-            options=list(vector_db.emergency_categories.keys()),
-            format_func=lambda x: vector_db.emergency_categories[x]['name'],
-            key="category_filter"
-        )
-        
-        # Enhanced search with category filter
-        category_search_query = st.text_input("Search with category filter:", key="category_search")
-        if search_query:
-            # Get all results first
-            all_results = vector_db.search(search_query, k=10)
-            
-            # Filter by selected categories if any
-            if selected_categories:
-                filtered_results = [
-                    (doc, score) for doc, score in all_results 
-                    if doc.get('category') in selected_categories
-                ]
-            else:
-                filtered_results = all_results[:3]
-            
-            for doc, score in filtered_results:
-                category_info = vector_db.emergency_categories.get(doc['category'], {})
-                with st.expander(f"{doc['title']} (Score: {score:.2f})"):
-                    st.write(f"**Category:** {category_info.get('name', doc['category'])}")
-                    st.write(f"**Source:** {doc.get('source', 'Unknown')}")
-                    st.write(f"**Relevance:** {doc.get('relevance_score', 0):.2f}")
-                    st.write(doc['content'])
-    
-    # Category Configuration
-    with st.expander("⚙️ Category Settings"):
-        st.write(f"**Content Relevance Threshold:** {vector_db.content_relevance_threshold}")
-        st.write(f"**Category Similarity Threshold:** {vector_db.category_similarity_threshold}")
-        
-        new_relevance = st.slider(
-            "Adjust Content Relevance Threshold", 
-            0.0, 1.0, 
-            vector_db.content_relevance_threshold, 
-            0.05
-        )
-        
-        if st.button("Update Thresholds"):
-            vector_db.content_relevance_threshold = new_relevance
-            st.success("Thresholds updated!")
