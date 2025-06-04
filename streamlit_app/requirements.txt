@@ -1,8 +1,30 @@
+# SafeBridge - AI-Powered Disaster Response Platform
+# Main dependencies
 streamlit>=1.30.0
 firebase-admin>=6.2.0
 google-cloud-firestore>=2.13.0
 Pillow>=10.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+
+# Streamlit extensions
 streamlit-option-menu>=0.3.6
 streamlit-extras>=0.3.4
-python-dotenv>=1.0.0
 streamlit-authenticator>=0.2.3
+streamlit-folium>=0.15.0
+streamlit-js-eval>=0.1.0
+
+# Data processing and visualization
+pandas>=2.0.0
+folium>=0.14.0
+
+# Date and time handling
+python-dateutil>=2.8.2
+
+# Development tools
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
+
+# For deployment
+gunicorn>=21.0.0
