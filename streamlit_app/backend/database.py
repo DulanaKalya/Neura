@@ -265,8 +265,8 @@ def get_all_responders():
     """
     try:
         # Get volunteers and first responders
-        volunteers = db.collection('users').where('role', '==', 'volunteer').get()
-        first_responders = db.collection('users').where('role', '==', 'first_responder').get()
+        volunteers = db.collection('volunteers').where('role', '==', 'volunteer').get()
+        first_responders = db.collection('volunteers').where('role', '==', 'first_responder').get()
         
         # Convert to list of dictionaries
         volunteer_list = [doc.to_dict() for doc in volunteers]
