@@ -11,6 +11,42 @@ from backend.models import chat_with_llama
 # Page configuration
 st.set_page_config(page_title="Emergency Assistant", page_icon="🆘", layout="wide")
 
+"""Render the sidebar with navigation"""
+
+def get_current_user():
+    # Placeholder implementation; replace with actual user retrieval logic
+    return {
+        "fullName": st.session_state.get("user", {}).get("fullName", "Guest"),
+        "role": st.session_state.get("user", {}).get("role", "User")
+    }
+
+user = get_current_user()
+    
+with st.sidebar:
+        st.markdown("### 🌊 SafeBridge")
+        st.markdown(f"Welcome, **{user['fullName']}**")
+        st.markdown(f"Role: **{user['role']}**")
+        st.markdown("---")
+        
+        # Navigation options        
+        if st.button("📊 Dashboard", use_container_width=True):
+            st.rerun()
+        if st.button("📝 Submit Request", use_container_width=True):
+            switch_page("request")
+        
+        if st.button("💬 AI Chat", use_container_width=True):
+            switch_page("chat")
+        
+        if st.button("🗺️ Map ",use_container_width=True):
+            switch_page("map")
+        
+        st.markdown("---")
+        if st.button("🚪 Logout", use_container_width=True):
+            st.session_state.authenticated = False
+            st.session_state.user = None
+            switch_page("app")
+
+
 # Define system prompt
 EMERGENCY_SYSTEM_PROMPT = """You are an emergency assistance AI specifically trained to help people during natural disasters.
 Your primary goal is to provide accurate, concise, and potentially life-saving information.

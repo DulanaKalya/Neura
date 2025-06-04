@@ -17,6 +17,7 @@ from backend.models import chat_with_llama,image_to_text_mistral
 from backend.requests_matcher import match_responders_to_requests
 
 
+
 # Configure the Streamlit page
 st.set_page_config(
     page_title="Dashboard - SafeBridge",
@@ -241,10 +242,13 @@ def render_sidebar():
         if st.button("📊 Dashboard", use_container_width=True):
             st.rerun()
         if st.button("📝 Submit Request", use_container_width=True):
-            switch_page("05_request")
+            switch_page("request")
         
         if st.button("💬 AI Chat", use_container_width=True):
             switch_page("chat")
+        
+        if st.button("🗺️ Map ",use_container_width=True):
+            switch_page("map")
         
         st.markdown("---")
         if st.button("🚪 Logout", use_container_width=True):
@@ -550,6 +554,8 @@ def render_volunteer_dashboard():
                         st.rerun()
                     else:
                         st.error(f"Error updating request: {update_response.get('error', 'Unknown error')}")
+    if st.button("🗺️ View Emergency Map", key="Map"):
+            switch_page("map")
 
 def render_first_responder_dashboard():
     """Render dashboard for first responders - similar to volunteer but with more authority"""
@@ -569,6 +575,7 @@ def render_first_responder_dashboard():
     
     # Stats section
     st.markdown("## 📊 Overview")
+
     col1, col2, col3 = st.columns(3)
     
     # Use our request matcher to get stats
@@ -769,6 +776,11 @@ def render_first_responder_dashboard():
                                         st.rerun()
                                     else:
                                         st.error(f"Error updating request: {update_response.get('error', 'Unknown error')}")
+        # Add a nicely styled button for the Map page
+        
+        if st.button("🗺️ View Emergency Map", key="Map"):
+            switch_page("map")
+
     else:
         st.error(f"Error loading requests: {response.get('error', 'Unknown error')}")
 

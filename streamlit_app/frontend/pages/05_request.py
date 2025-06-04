@@ -109,19 +109,24 @@ def render_sidebar():
         st.markdown(f"Role: **{user['role']}**")
         st.markdown("---")
         
-        # Navigation options
+        # Navigation options        
         if st.button("📊 Dashboard", use_container_width=True):
-            switch_page("04_dashboard")
-        if st.button("📝 Submit Request", use_container_width=True):
             st.rerun()
+        if st.button("📝 Submit Request", use_container_width=True):
+            switch_page("request")
+        
         if st.button("💬 AI Chat", use_container_width=True):
             switch_page("chat")
+        
+        if st.button("🗺️ Map ",use_container_width=True):
+            switch_page("map")
         
         st.markdown("---")
         if st.button("🚪 Logout", use_container_width=True):
             st.session_state.authenticated = False
             st.session_state.user = None
             switch_page("app")
+
 
 def render_request_form():
     """Render the request submission form"""
