@@ -258,7 +258,7 @@ def render_request_form():
             
             if "data" in response:
                 st.success("Your request has been submitted successfully")
-                st.balloons()
+                
                
             else:
                 st.error(f"Error submitting request: {response.get('error', 'Unknown error')}")
