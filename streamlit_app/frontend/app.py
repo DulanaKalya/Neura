@@ -142,7 +142,7 @@ def display_home_content():
     
     with col2:
         # Use a sample disaster response image
-        st.image("D:\\MY_PROJECTS\\Intellihack\\Finals\\streamlit_app\\natural-disaster.jpg", 
+        st.image("natural-disaster.jpg", 
                  caption="AI-powered emergency response platform")
     
     # Feature section
