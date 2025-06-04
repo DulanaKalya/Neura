@@ -7,6 +7,13 @@ Pillow>=10.0.0
 python-dotenv>=1.0.0
 requests>=2.31.0
 
+# Vector database and text processing
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+PyPDF2>=3.0.0
+langchain>=0.1.0
+numpy>=1.24.0
+
 # Streamlit extensions
 streamlit-option-menu>=0.3.6
 streamlit-extras>=0.3.4

@@ -6,12 +6,14 @@ This page allows users to submit emergency requests.
 import streamlit as st
 import sys
 import os
+from PIL import Image
 from streamlit_extras.switch_page_button import switch_page
 
 # Add parent directory to import path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from backend.auth import init_session_state, get_current_user, check_authentication
 from backend.database import submit_request
+from backend.models import image_to_text_mistral
 from streamlit_js_eval import streamlit_js_eval
 
 # Configure the Streamlit page
@@ -148,26 +150,112 @@ def render_request_form():
             placeholder="Please provide details about your emergency...",
             height=150,
         )
-        # Upload Image or Record Voice with icons and buttons
+
+         # Store AI analysis results in session state if not already present
+        if "ai_analysis" not in st.session_state:
+            st.session_state["ai_analysis"] = ""
         
+        # Upload Image or Record Voice with icons and buttons
         st.markdown("#### Attach Visuals (Optional)")
 
-        col_img, col_audio = st.columns(2)
+        col_img, col_upload = st.columns(2)
 
         with col_img:
             image_data = st.camera_input("Capture Image (optional)", key="camera_input")
-            if image_data:
+            
+            # If image is captured and hasn't been analyzed yet
+            if image_data and not st.session_state.get("image_analyzed"):
+                # Display the captured image
                 st.image(image_data, caption="Captured Image", use_column_width=True)
+                
+                # Process image with Mistral
+                with st.spinner('Analyzing disaster image...'):
+                    try:
+                        # Convert to PIL Image
+                        image = Image.open(image_data)
+                        
+                        # Create prompt for disaster analysis
+                        analysis_prompt = """
+                        Analyze this disaster image and provide a concise assessment of:
+                        1. Type of disaster visible
+                        2. Visible damage or hazards
+                        3. Any immediate safety concerns
+                        
+                        Keep it brief and factual for emergency responders.
+                        """
+                        
+                        # Get analysis from Mistral
+                        analysis = image_to_text_mistral(image, analysis_prompt)
+                        
+                        # Store in session state
+                        st.session_state["ai_analysis"] = analysis
+                        st.session_state["image_analyzed"] = True
+                        
+                        # Show the analysis
+                        st.success("AI analysis complete!")
+                        st.info(f"AI assessment: {analysis}")
+                        
+                        # Offer to append to request
+                        st.session_state["append_analysis"] = True
+                        
+                    except Exception as e:
+                        st.error(f"Error analyzing image: {str(e)}")
+            
+            # If image was previously analyzed, show the analysis
+            elif image_data and st.session_state.get("image_analyzed"):
+                st.image(image_data, caption="Captured Image", use_column_width=True)
+                st.info(f"AI assessment: {st.session_state['ai_analysis']}")
+                
             st.session_state["captured_image"] = image_data
-
-        with col_audio:
-
-            # Optionally, you can allow file upload for audio as a workaround
-            audio_file = st.file_uploader("Or upload an audio file", type=["wav", "mp3", "m4a"], key="audio_upload")
-            if audio_file:
-                st.audio(audio_file, format="audio/wav")
-
-
+        with col_upload:
+            # Changed from audio to image upload
+            uploaded_image = st.file_uploader("Or upload an image file", type=["jpg", "jpeg", "png"], key="image_upload")
+            
+            # If image is uploaded and hasn't been analyzed yet
+            if uploaded_image and not st.session_state.get("uploaded_image_analyzed"):
+                # Display the uploaded image
+                st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
+                
+                # Process image with Mistral
+                with st.spinner('Analyzing uploaded disaster image...'):
+                    try:
+                        # Convert to PIL Image
+                        image = Image.open(uploaded_image)
+                        
+                        # Create prompt for disaster analysis
+                        analysis_prompt = """
+                        Analyze this disaster image and provide a concise assessment of:
+                        1. Type of disaster visible
+                        2. Visible damage or hazards
+                        3. Any immediate safety concerns
+                        
+                        Keep it brief and factual for emergency responders.
+                        """
+                        
+                        # Get analysis from Mistral
+                        analysis = image_to_text_mistral(image, analysis_prompt)
+                        
+                        # Store in session state
+                        st.session_state["uploaded_ai_analysis"] = analysis
+                        st.session_state["uploaded_image_analyzed"] = True
+                        
+                        # Show the analysis
+                        st.success("AI analysis complete!")
+                        st.info(f"AI assessment: {analysis}")
+                        
+                        # Set the analysis to be used in the form
+                        st.session_state["ai_analysis"] = analysis
+                        st.session_state["image_analyzed"] = True
+                        
+                    except Exception as e:
+                        st.error(f"Error analyzing uploaded image: {str(e)}")
+            
+            # If uploaded image was previously analyzed, show the analysis
+            elif uploaded_image and st.session_state.get("uploaded_image_analyzed"):
+                st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
+                st.info(f"AI assessment: {st.session_state['uploaded_ai_analysis']}")
+                
+            st.session_state["uploaded_image"] = uploaded_image
         # Urgency selection
         st.markdown("### Urgency Level")
         urgency_col1, urgency_col2, urgency_col3 = st.columns(3)
@@ -230,7 +318,7 @@ def render_request_form():
         submitted = st.form_submit_button("Submit Request", use_container_width=True)
         
         if submitted:
-            # Validate form
+             # Validate form
             if not request_text:
                 st.error("Please describe your emergency situation")
                 return
@@ -246,9 +334,14 @@ def render_request_form():
             elif low_urgency:
                 urgency = "Low"
             
+            # Append AI analysis to request text if available
+            full_request_text = request_text
+            if st.session_state.get("ai_analysis"):
+                full_request_text += f"\n\n[AI Image Analysis]: {st.session_state['ai_analysis']}"
+            
             # Submit request to database
             request_data = {
-                "text": request_text,
+                "text": full_request_text,
                 "urgency": urgency,
                 "type": request_type,
                 "location": location
@@ -258,8 +351,11 @@ def render_request_form():
             
             if "data" in response:
                 st.success("Your request has been submitted successfully")
+                st.balloons()  # Add balloons animation for successful submission
                 
-               
+                # Clear the session state for next request
+                st.session_state["ai_analysis"] = ""
+                st.session_state["image_analyzed"] = False
             else:
                 st.error(f"Error submitting request: {response.get('error', 'Unknown error')}")
 
@@ -268,11 +364,17 @@ def render_request_form():
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Submit Another Request", use_container_width=True):
+            # Clear analysis data for new request
+            if "ai_analysis" in st.session_state:
+                del st.session_state["ai_analysis"]
+            if "image_analyzed" in st.session_state:
+                del st.session_state["image_analyzed"]
             st.rerun()
     with col2:
         if st.button("Go to Dashboard", use_container_width=True):
             switch_page("dashboard")
 
+            
 def main():
     # Check authentication
     check_authentication()
