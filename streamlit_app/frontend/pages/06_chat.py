@@ -8,6 +8,8 @@ from streamlit_extras.switch_page_button import switch_page
 # Add backend to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from backend.vector_db import EmergencyKnowledgeVectorDB
+from backend.auth import init_session_state, get_current_user
+
 
 # Add this import if you want image analysis
 try:
@@ -18,6 +20,7 @@ except ImportError:
     IMAGE_ANALYSIS_AVAILABLE = False
     st.warning("Image analysis not available - Mistral model not configured")
 
+init_session_state()
 
 
 
@@ -68,6 +71,35 @@ def get_rag_context(query: str, k: int = 3) -> str:
     
     return "\n\n".join(context_parts)
 
+def render_sidebar():
+    """Render the sidebar with navigation"""
+    user = get_current_user()
+    
+    with st.sidebar:
+        st.markdown("### 🌊 SafeBridge")
+        st.markdown(f"Welcome, **{user['fullName']}**")
+        st.markdown(f"Role: **{user['role']}**")
+        st.markdown("---")
+        
+        # Navigation options        
+        if st.button("📊 Dashboard", use_container_width=True):
+            st.rerun()
+        if st.button("📝 Submit Request", use_container_width=True):
+            switch_page("request")
+        
+        if st.button("💬 AI Chat", use_container_width=True):
+            switch_page("chat")
+        
+        if st.button("🗺️ Map ",use_container_width=True):
+            switch_page("map")
+        
+        st.markdown("---")
+        if st.button("🚪 Logout", use_container_width=True):
+            st.session_state.authenticated = False
+            st.session_state.user = None
+            switch_page("app")
+
+
 def create_rag_prompt(user_query: str, context: str) -> str:
     """
     Create enhanced prompt with RAG context
@@ -115,6 +147,9 @@ IMAGE_ANALYSIS_PROMPT = """You are analyzing an emergency situation image. Pleas
 
 Be specific and focus on actionable emergency response information."""
 
+
+
+render_sidebar()
 
 
 # Initialize session state
