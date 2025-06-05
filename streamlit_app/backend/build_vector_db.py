@@ -17,6 +17,7 @@ def main():
     
     print("Building Emergency Knowledge Vector Database from PDFs...")
     
+    
     # Initialize database
     db = EmergencyKnowledgeVectorDB(
         local_storage_path="./data/vector_db",

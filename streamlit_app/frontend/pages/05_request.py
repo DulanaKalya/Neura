@@ -203,7 +203,7 @@ def render_request_form():
             
             # If image was previously analyzed, show the analysis
             elif image_data and st.session_state.get("image_analyzed"):
-                st.image(image_data, caption="Captured Image", use_column_width=True)
+                st.image(image_data, caption="Captured Image", use_container_width=True)
                 st.info(f"AI assessment: {st.session_state['ai_analysis']}")
                 
             st.session_state["captured_image"] = image_data
@@ -214,7 +214,7 @@ def render_request_form():
             # If image is uploaded and hasn't been analyzed yet
             if uploaded_image and not st.session_state.get("uploaded_image_analyzed"):
                 # Display the uploaded image
-                st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
+                st.image(uploaded_image, caption="Uploaded Image", use_container_width=True)
                 
                 # Process image with Mistral
                 with st.spinner('Analyzing uploaded disaster image...'):
@@ -351,7 +351,7 @@ def render_request_form():
             
             if "data" in response:
                 st.success("Your request has been submitted successfully")
-                st.balloons()  # Add balloons animation for successful submission
+                #st.balloons()  # Add balloons animation for successful submission
                 
                 # Clear the session state for next request
                 st.session_state["ai_analysis"] = ""

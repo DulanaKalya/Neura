@@ -113,7 +113,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-def display_task_cards(user_id):
+def display_task_cards(user_id,matches_response):
     """
     Display task cards for the current responder with action buttons
     
@@ -121,7 +121,7 @@ def display_task_cards(user_id):
         user_id: ID of the current user/responder
     """
     # Get matches from our agent
-    matches_response = match_responders_to_requests()
+    
     
     if "error" in matches_response:
         st.error(f"Failed to match responders: {matches_response['error']}")
@@ -134,7 +134,8 @@ def display_task_cards(user_id):
     # Find tasks assigned to this user
     matches = matches_response.get("matches", {})
     user_tasks = []
-    
+    print(user_id)
+    print(matches)
     for request_id, match_data in matches.items():
         if "matches" in match_data:
             for match in match_data["matches"]:
@@ -150,15 +151,34 @@ def display_task_cards(user_id):
         st.info("No tasks are currently matched to you.")
         return
     
+    # Get request details from database
+    all_requests_response = get_all_requests()
+    if "data" not in all_requests_response:
+        st.error("Failed to fetch request details")
+        return
+        
+    all_requests = {req["id"]: req for req in all_requests_response["data"]}
+    
     st.markdown("### Your Matched Tasks")
     st.markdown("These tasks have been matched to your skills and experience:")
     
     for i, task in enumerate(user_tasks):
+        request_id = task['request_id']
+        request_details = all_requests.get(request_id, {})
+        
         with st.container():
             # Create a card-like container for each task
+            urgency = request_details.get("urgency", "Unknown")
+            urgency_class = "high" if urgency == "High" else "medium" if urgency == "Medium" else "low"
+            
             st.markdown(f"""
-            <div style="border: 1px solid #ddd; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
-                <h4>Emergency Request {i+1}</h4>
+            <div class="request-card {urgency_class}">
+                <h4>{request_details.get("type", "Emergency")} Request in {request_details.get("location", "Unknown location")}</h4>
+                <p>{request_details.get("text", "No details available")}</p>
+                <div style="font-size: 0.9rem; color: #555; margin-top: 10px;">
+                    <strong>Urgency:</strong> {urgency} • 
+                    <strong>Submitted:</strong> {format_timestamp(request_details.get("timestamp"))}
+                </div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -358,8 +378,9 @@ def render_affected_individual_dashboard():
         - If trapped, signal for help using light, sound, or phone if available
         - Conserve your phone battery by limiting use to essential communications
         """)
-
-    
+#----------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------Volunteers------------------------------------------------------------------------------   
+#----------------------------------------------------------------------------------------------------------------------------------
 
 def render_volunteer_dashboard():
     """Render dashboard for volunteers"""
@@ -412,7 +433,7 @@ def render_volunteer_dashboard():
     
     # Display task cards
     st.markdown("## 📋 Your Tasks")
-    display_task_cards(user_id)
+    display_task_cards(user_id,matches_response=matches_response)
     
     # Recent activity section
     st.markdown("## 🕒 Recent Activity")
@@ -469,93 +490,97 @@ def render_volunteer_dashboard():
         
         # Pending requests
         st.markdown("### Requests Needing Assistance")
-        pending_requests = [r for r in all_requests if r.get("status") == "pending"]
-        if not pending_requests:
-            st.success("No pending requests at this time!")
+        # All active emergency requests
+        st.markdown("### All Active Emergency Requests")
+        active_requests = [r for r in all_requests if r.get("status") != "resolved"]
+        
+        if not active_requests:
+            st.info("No active requests at this time")
         else:
             # Sort by urgency and timestamp
             urgency_order = {"High": 0, "Medium": 1, "Low": 2, "Unknown": 3}
-            sorted_requests = sorted(pending_requests, 
+            sorted_requests = sorted(active_requests, 
                                     key=lambda x: (urgency_order.get(x.get("urgency", "Unknown"), 4), 
                                                 -(x.get("timestamp", 0) or 0)))
             
-            for i, request in enumerate(sorted_requests):
-                urgency_class = "low"
-                if request.get("urgency") == "High":
-                    urgency_class = "high"
-                elif request.get("urgency") == "Medium":
-                    urgency_class = "medium"
-                
-                with st.container():
-                    st.markdown(f"""
-                    <div class="request-card {urgency_class}">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <div>
-                                <strong>{request.get("type", "General")} Request</strong> • 
-                                <span style="color: {'#f44336' if request.get('urgency') == 'High' else '#ff9800' if request.get('urgency') == 'Medium' else '#4caf50'};">
-                                    {request.get("urgency", "Unknown")} Urgency
-                                </span>
-                            </div>
-                            <div style="color: #777; font-size: 0.8rem;">{format_timestamp(request.get("timestamp"))}</div>
-                        </div>
-                        <p>{request.get("text", "")}</p>
-                        <div style="font-size: 0.9rem; color: #555;">
-                            <strong>Location:</strong> {request.get("location", "Not specified")}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("Accept Request", key=f"accept_{i}", use_container_width=True):
-                            from backend.database import update_request_status
-                            update_response = update_request_status(request.get("id"), "processing")
-                            if "data" in update_response:
-                                st.success("Request accepted!")
-                                st.rerun()
-                            else:
-                                st.error(f"Error accepting request: {update_response.get('error', 'Unknown error')}")
-    else:
-        st.error(f"Error loading requests: {response.get('error', 'Unknown error')}")
-        
-    # Active assignments
-    st.markdown("### Your Active Assignments")
-    response = get_all_requests()
-    if "data" in response:
-        all_requests = response["data"]
-        processing_requests = [r for r in all_requests if r.get("status") == "processing"]
-        
-        if not processing_requests:
-            st.info("You don't have any active assignments")
-        else:
-            for i, request in enumerate(processing_requests):
-                st.markdown(f"""
-                <div class="request-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <div>
-                            <strong>{request.get("type", "General")} Request</strong> • 
-                            <span class="status-badge status-processing">in progress</span>
-                        </div>
-                        <div style="color: #777; font-size: 0.8rem;">{format_timestamp(request.get("timestamp"))}</div>
-                    </div>
-                    <p>{request.get("text", "")}</p>
-                    <div style="font-size: 0.9rem; color: #555;">
-                        <strong>Location:</strong> {request.get("location", "Not specified")} • 
-                        <strong>Urgency:</strong> {request.get("urgency", "Unknown")}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if st.button("Mark as Resolved", key=f"resolve_{i}", use_container_width=True):
-                    from backend.database import update_request_status
-                    update_response = update_request_status(request.get("id"), "resolved")
-                    if "data" in update_response:
-                        st.success("Request marked as resolved!")
-                        st.rerun()
+            # Create tabs for different urgency levels
+            tabs = st.tabs(["All", "High", "Medium", "Low"])
+            
+            for tab_idx, tab in enumerate(tabs):
+                with tab:
+                    if tab_idx == 0:
+                        filtered = sorted_requests
+                    elif tab_idx == 1:
+                        filtered = [r for r in sorted_requests if r.get("urgency") == "High"]
+                    elif tab_idx == 2:
+                        filtered = [r for r in sorted_requests if r.get("urgency") == "Medium"]
                     else:
-                        st.error(f"Error updating request: {update_response.get('error', 'Unknown error')}")
+                        filtered = [r for r in sorted_requests if r.get("urgency") == "Low"]
+                    
+                    if not filtered:
+                        st.info(f"No {'active' if tab_idx == 0 else tab.label.lower() + ' urgency'} requests")
+                        continue
+                        
+                    for i, request in enumerate(filtered):
+                        urgency_class = "low"
+                        if request.get("urgency") == "High":
+                            urgency_class = "high"
+                        elif request.get("urgency") == "Medium":
+                            urgency_class = "medium"
+
+                        text = request.get("text", "")
+                        prompt = f"Request: {text}\nLocation: {request.get('location', 'Unknown')}\nUrgency: {request.get('urgency', 'Unknown')} make a summery and list of instructions to how to handle the situations"
+                        summery = chat_with_llama(prompt,history="")
+                        status_class = f"status-{request.get('status', 'pending')}"
+                        
+                        with st.expander(f"{request.get('type', 'General')} - {request.get('location', 'Unknown')}"):
+                            st.markdown(f"""
+                            <div style ='color:#455;' class="request-card {urgency_class}">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <div>
+                                        <strong>{request.get("type", "General")} Request</strong> • 
+                                        <span class="status-badge {status_class}">{request.get("status", "pending")}</span>
+                                    </div>
+                                    <div style="color: #777; font-size: 0.8rem;">{format_timestamp(request.get("timestamp"))}</div>
+                                </div>
+                                <p>{summery}</p>
+                                <div style="font-size: 0.9rem; color: #555;">
+                                    <strong>Location:</strong> {request.get("location", "Not specified")} • 
+                                    <strong>Urgency:</strong> {request.get("urgency", "Unknown")}
+                                </div>
+                                <div style="font-size: 0.9rem; color: #555;">
+                                    <strong>Last Updated:</strong> {format_timestamp(request.get("lastUpdated"))}
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            col1, col2 = st.columns(2)
+                            
+                            if request.get("status") == "pending":
+                                if st.button("Take Action", key=f"take_{tab_idx}_{i}", use_container_width=True):
+                                    from backend.database import update_request_status
+                                    update_response = update_request_status(request.get("id"), "processing")
+                                    if "data" in update_response:
+                                        st.success("Request status updated!")
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Error updating request: {update_response.get('error', 'Unknown error')}")
+                            elif request.get("status") == "processing":
+                                if st.button("Mark Resolved", key=f"resolve_{tab_idx}_{i}", use_container_width=True):
+                                    from backend.database import update_request_status
+                                    update_response = update_request_status(request.get("id"), "resolved")
+                                    if "data" in update_response:
+                                        st.success("Request marked as resolved!")
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Error updating request: {update_response.get('error', 'Unknown error')}")
     if st.button("🗺️ View Emergency Map", key="Map"):
             switch_page("map")
+
+#----------------------------------------------------------------------------------------------------------------------------------
+#------------------------------------------First Responders------------------------------------------------------------------------------   
+#----------------------------------------------------------------------------------------------------------------------------------
+
 
 def render_first_responder_dashboard():
     """Render dashboard for first responders - similar to volunteer but with more authority"""
@@ -610,7 +635,7 @@ def render_first_responder_dashboard():
     
     # Display task cards
     st.markdown("## 📋 Your Tasks")
-    display_task_cards(user_id)
+    display_task_cards(user_id,matches_response=matches_response)
     
     # Recent activity section
     st.markdown("## 🕒 Recent Activity")
