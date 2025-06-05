@@ -24,6 +24,29 @@ init_session_state()
 # Define CSS
 st.markdown("""
 <style>
+            
+    /* Hide the default Streamlit page navigation */
+    .css-1d391kg {display: none;}
+    .css-1rs6os {display: none;}
+    .css-17eq0hr {display: none;}
+    div[data-testid="stSidebarNav"] {display: none;}
+    .css-k1vhr4 {display: none;}
+    .css-1cypcdb {display: none;}
+    section[data-testid="stSidebarNav"] {display: none;}
+    
+    /* Keep the sidebar itself visible but hide the navigation */
+    section[data-testid="stSidebar"] {
+        display: block !important;
+    }
+    
+    /* Hide specific navigation elements */
+    .css-1544g2n {display: none;}
+    .css-163ttbj {display: none;}
+    
+    /* Additional selectors to ensure page navigation is hidden */
+    ul[data-testid="stSidebarNav"] {display: none;}
+    nav[data-testid="stSidebarNav"] {display: none;}
+
     .main-title {
         font-size: 2.5rem !important;
         font-weight: 700 !important;
